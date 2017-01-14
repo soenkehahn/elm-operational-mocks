@@ -5,12 +5,14 @@ import Expect exposing (..)
 import Tuple exposing (..)
 import Array exposing (..)
 import Platform.Cmd exposing (..)
+import Http exposing (..)
+import Operational
 import Operational.Mocks exposing (..)
 
 
 type Msg
     = FooResponse String
-    | Error String
+    | Error Http.Error
 
 
 type TestPrimitive
@@ -34,7 +36,40 @@ mkProgram { init, update } =
 all : Test
 all =
     describe "Operational.Mocks"
-        [ describe "runMocked"
+        [ describe "compatibility with elm-operational"
+            [ test "allows to use toCmds on the same program"
+                (\() ->
+                    let
+                        program =
+                            mkProgram
+                                { init = []
+                                , update = \_ -> []
+                                }
+
+                        convert : TestPrimitive -> Cmd Msg
+                        convert _ =
+                            getString "/url"
+                                |> send
+                                    (\result ->
+                                        case result of
+                                            Ok s ->
+                                                FooResponse s
+
+                                            Err err ->
+                                                Error err
+                                    )
+
+                        x :
+                            { init : ( Array String, Cmd Msg )
+                            , update : Msg -> Array String -> ( Array String, Cmd Msg )
+                            }
+                        x =
+                            Operational.toCmd convert program
+                    in
+                        pass
+                )
+            ]
+        , describe "runMocked"
             [ test "allows to test a request command"
                 (\() ->
                     let
