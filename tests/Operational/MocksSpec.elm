@@ -99,7 +99,31 @@ all =
                             |> equal
                                 (Just
                                     { given = ""
-                                    , message = "expected command: " ++ toString (Get "/foo")
+                                    , message =
+                                        "expected command: "
+                                            ++ toString (Get "/foo")
+                                    }
+                                )
+                )
+            , test "detects unexpected commands"
+                (\() ->
+                    let
+                        program =
+                            mkProgram
+                                { init = [ Get "/foo" ]
+                                , update = \_ -> []
+                                }
+                    in
+                        runMocked program
+                            []
+                            (fromList [])
+                            |> getFailure
+                            |> equal
+                                (Just
+                                    { given = ""
+                                    , message =
+                                        "unexpected command: "
+                                            ++ toString (Get "/foo")
                                     }
                                 )
                 )

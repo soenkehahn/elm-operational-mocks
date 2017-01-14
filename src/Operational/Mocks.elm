@@ -53,6 +53,15 @@ simulate program cmds currentModel expectedCommands expectedFinal =
         ( [], [ ( expectedCommand, _ ) ] ) ->
             fail ("expected command: " ++ toString expectedCommand)
 
+        ( [], expectedCommands ) ->
+            fail
+                ("expected commands: "
+                    ++ toString (List.map first expectedCommands)
+                )
+
+        ( [ cmd ], [] ) ->
+            fail ("unexpected command: " ++ toString cmd)
+
         ( cmd :: queuedCmds, ( expectedCmd, response ) :: restExpectedCommands ) ->
             (cmd |> equal expectedCmd)
                 &&& let
