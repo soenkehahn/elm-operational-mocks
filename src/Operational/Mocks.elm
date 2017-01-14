@@ -10,11 +10,6 @@ import Expect exposing (Expectation, fail, equal)
 import Tuple exposing (first, second)
 
 
--- fixme: remove calls to crash
-
-import Debug exposing (crash)
-
-
 {-| `runMocked component expectedEffects finalState` tests the given elm
 `component`. It fails when one of the expected effects is not issues by the
 application or if the final resulting state is not equal to `finalState`.
@@ -62,6 +57,9 @@ simulate program cmds currentModel expectedCommands expectedFinal =
         ( [ cmd ], [] ) ->
             fail ("unexpected command: " ++ toString cmd)
 
+        ( cmds, [] ) ->
+            fail ("unexpected commands: " ++ toString cmds)
+
         ( cmd :: queuedCmds, ( expectedCmd, response ) :: restExpectedCommands ) ->
             (cmd |> equal expectedCmd)
                 &&& let
@@ -73,9 +71,6 @@ simulate program cmds currentModel expectedCommands expectedFinal =
                             nextModel
                             restExpectedCommands
                             expectedFinal
-
-        x ->
-            crash (toString x)
 
 
 (&&&) : Expectation -> Expectation -> Expectation
