@@ -1,12 +1,12 @@
 module Operational.Mocks exposing (runMocked)
 
-import Expect exposing (..)
-import Tuple exposing (..)
+import Expect exposing (Expectation, fail, equal)
+import Tuple exposing (first, second)
 
 
 -- fixme: remove calls to crash
 
-import Debug exposing (..)
+import Debug exposing (crash)
 
 
 runMocked :
