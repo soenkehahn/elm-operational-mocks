@@ -1,5 +1,11 @@
 module Operational.Mocks exposing (runMocked)
 
+{-| `Operational.Mocks` allows you to test side-effects of elm applications
+as long as they're written with the help of `elm-operational`.
+
+@docs runMocked
+-}
+
 import Expect exposing (Expectation, fail, equal)
 import Tuple exposing (first, second)
 
@@ -9,6 +15,10 @@ import Tuple exposing (first, second)
 import Debug exposing (crash)
 
 
+{-| `runMocked component expectedEffects finalState` tests the given elm
+`component`. It fails when one of the expected effects is not issues by the
+application or if the final resulting state is not equal to `finalState`.
+-}
 runMocked :
     { program
         | init : ( model, List primitive )
