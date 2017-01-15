@@ -20,7 +20,7 @@ application as a list of `Step`s. In a step you can:
 type Step cmd msg model
     = ExpectedCmd cmd
     | SendMsg msg
-    | InspectModel model
+    | InspectModel (model -> Expectation)
 
 
 {-| `runMocked component expectedEffects finalState` tests the given elm
@@ -71,8 +71,8 @@ simulate program expectedSteps ( currentModel, cmds ) =
                     restExpectedSteps
                     ( nextModel, (queuedCmds ++ nextCmds) )
 
-        ( queuedCmds, (InspectModel expected) :: restExpectedSteps ) ->
-            (currentModel |> equal expected)
+        ( queuedCmds, (InspectModel expectation) :: restExpectedSteps ) ->
+            expectation currentModel
                 &&& simulate program
                         restExpectedSteps
                         ( currentModel, queuedCmds )

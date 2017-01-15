@@ -135,7 +135,7 @@ all =
                                 }
                     in
                         runMocked program
-                            [ InspectModel [ "foo" ]
+                            [ InspectModel (equal [ "foo" ])
                             ]
                             |> getFailure
                             |> equal
@@ -242,6 +242,20 @@ all =
                         , ExpectedCmd (Get "/baz")
                         ]
             )
+        , test "it allows to inspect the model"
+            (\() ->
+                let
+                    program =
+                        mkProgram
+                            { init = []
+                            , update = \_ -> []
+                            }
+                in
+                    runMocked program
+                        [ SendMsg (ServerResponse "foo-response")
+                        , InspectModel (List.length >> equal 1)
+                        ]
+            )
         , test "bigger example"
             (\() ->
                 let
@@ -264,16 +278,16 @@ all =
                             }
                 in
                     runMocked program
-                        [ InspectModel []
+                        [ InspectModel (equal [])
                         , ExpectedCmd (Get "/init")
-                        , InspectModel []
+                        , InspectModel (equal [])
                         , SendMsg (ServerResponse "init-response")
-                        , InspectModel [ "init-response" ]
+                        , InspectModel (equal [ "init-response" ])
                         , ExpectedCmd (Get "/update")
-                        , InspectModel [ "init-response" ]
+                        , InspectModel (equal [ "init-response" ])
                         , SendMsg (ServerResponse "update-response")
                         , ExpectedCmd (Get "/last")
-                        , InspectModel [ "init-response", "update-response" ]
+                        , InspectModel (equal [ "init-response", "update-response" ])
                         ]
             )
         ]
