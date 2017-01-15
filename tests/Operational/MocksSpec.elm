@@ -3,7 +3,6 @@ module Operational.MocksSpec exposing (all)
 import Test exposing (..)
 import Expect exposing (..)
 import Tuple exposing (..)
-import Array exposing (..)
 import Platform.Cmd exposing (..)
 import Http exposing (..)
 import Operational
@@ -11,25 +10,25 @@ import Operational.Mocks exposing (..)
 
 
 type Msg
-    = FooResponse String
+    = ServerResponse String
     | Error Http.Error
 
 
-type TestPrimitive
+type TestCmd
     = Get String
 
 
 mkProgram { init, update } =
     { init =
-        ( empty, init )
+        ( [], init )
     , update =
         \msg model ->
             case msg of
                 Error _ ->
                     ( model, [] )
 
-                FooResponse s ->
-                    ( push s model, update s )
+                ServerResponse s ->
+                    ( model ++ [ s ], update s )
     }
 
 
@@ -46,22 +45,22 @@ all =
                                 , update = \_ -> []
                                 }
 
-                        convert : TestPrimitive -> Cmd Msg
+                        convert : TestCmd -> Cmd Msg
                         convert _ =
                             getString "/url"
                                 |> send
                                     (\result ->
                                         case result of
                                             Ok s ->
-                                                FooResponse s
+                                                ServerResponse s
 
                                             Err err ->
                                                 Error err
                                     )
 
                         x :
-                            { init : ( Array String, Cmd Msg )
-                            , update : Msg -> Array String -> ( Array String, Cmd Msg )
+                            { init : ( List String, Cmd Msg )
+                            , update : Msg -> List String -> ( List String, Cmd Msg )
                             }
                         x =
                             Operational.toCmd convert program
@@ -80,8 +79,8 @@ all =
                                 }
                     in
                         runMocked program
-                            [ ( Get "/foo", FooResponse "bar" ) ]
-                            (fromList [ "bar" ])
+                            [ ExpectedCmd (Get "/foo")
+                            ]
                 )
             , test "detects missing commands"
                 (\() ->
@@ -93,8 +92,8 @@ all =
                                 }
                     in
                         runMocked program
-                            [ ( Get "/foo", FooResponse "bar" ) ]
-                            (fromList [ "bar" ])
+                            [ ExpectedCmd (Get "/foo")
+                            ]
                             |> getFailure
                             |> equal
                                 (Just
@@ -116,7 +115,6 @@ all =
                     in
                         runMocked program
                             []
-                            (fromList [])
                             |> getFailure
                             |> equal
                                 (Just
@@ -137,13 +135,13 @@ all =
                                 }
                     in
                         runMocked program
-                            [ ( Get "/foo", FooResponse "bar" ) ]
-                            (fromList [ "baz" ])
+                            [ InspectModel [ "foo" ]
+                            ]
                             |> getFailure
                             |> equal
                                 (getFailure
-                                    (fromList [ "bar" ]
-                                        |> equal (fromList [ "baz" ])
+                                    ([]
+                                        |> equal [ "foo" ]
                                     )
                                 )
                 )
@@ -154,7 +152,7 @@ all =
                     let
                         program =
                             mkProgram
-                                { init = [ Get "/foo" ]
+                                { init = []
                                 , update =
                                     \s ->
                                         case s of
@@ -166,25 +164,23 @@ all =
                                 }
                     in
                         runMocked program
-                            [ ( Get "/foo", FooResponse "foo-response" )
-                            , ( Get "/bar", FooResponse "bar-response" )
+                            [ SendMsg (ServerResponse "foo-response")
+                            , ExpectedCmd (Get "/bar")
                             ]
-                            (fromList [ "foo-response", "bar-response" ])
                 )
             , test "detects missing commands"
                 (\() ->
                     let
                         program =
                             mkProgram
-                                { init = [ Get "/foo" ]
+                                { init = []
                                 , update = \_ -> []
                                 }
                     in
                         runMocked program
-                            [ ( Get "/foo", FooResponse "foo-response" )
-                            , ( Get "/bar", FooResponse "bar-response" )
+                            [ SendMsg (ServerResponse "foo-response")
+                            , ExpectedCmd (Get "/bar")
                             ]
-                            (fromList [ "foo-response", "bar-response" ])
                             |> getFailure
                             |> equal
                                 (Just
@@ -198,7 +194,7 @@ all =
                     let
                         program =
                             mkProgram
-                                { init = [ Get "/foo" ]
+                                { init = []
                                 , update =
                                     \s ->
                                         case s of
@@ -210,10 +206,9 @@ all =
                                 }
                     in
                         runMocked program
-                            [ ( Get "/foo", FooResponse "foo-response" )
-                            , ( Get "/baz", FooResponse "bar-response" )
+                            [ SendMsg (ServerResponse "foo-response")
+                            , ExpectedCmd (Get "/baz")
                             ]
-                            (fromList [ "foo-response", "bar-response" ])
                             |> getFailure
                             |> equal
                                 (getFailure
@@ -222,42 +217,13 @@ all =
                                     )
                                 )
                 )
-            , test "detects wrong final states"
-                (\() ->
-                    let
-                        program =
-                            mkProgram
-                                { init = [ Get "/foo" ]
-                                , update =
-                                    \s ->
-                                        case s of
-                                            "foo-response" ->
-                                                [ Get "/bar" ]
-
-                                            _ ->
-                                                []
-                                }
-                    in
-                        runMocked program
-                            [ ( Get "/foo", FooResponse "foo-response" )
-                            , ( Get "/bar", FooResponse "bar-response" )
-                            ]
-                            (fromList [ "expected" ])
-                            |> getFailure
-                            |> equal
-                                (getFailure
-                                    (fromList [ "foo-response", "bar-response" ]
-                                        |> equal (fromList [ "expected" ])
-                                    )
-                                )
-                )
             ]
-        , test "allows to let mocks return multiple messages"
+        , test "allows to test for multiple commands"
             (\() ->
                 let
                     program =
                         mkProgram
-                            { init = [ Get "/foo" ]
+                            { init = []
                             , update =
                                 \s ->
                                     case s of
@@ -271,10 +237,43 @@ all =
                             }
                 in
                     runMocked program
-                        [ ( Get "/foo", FooResponse "foo-response" )
-                        , ( Get "/bar", FooResponse "bar-response" )
-                        , ( Get "/baz", FooResponse "baz-response" )
+                        [ SendMsg (ServerResponse "foo-response")
+                        , ExpectedCmd (Get "/bar")
+                        , ExpectedCmd (Get "/baz")
                         ]
-                        (fromList [ "foo-response", "bar-response", "baz-response" ])
+            )
+        , test "bigger example"
+            (\() ->
+                let
+                    program =
+                        mkProgram
+                            { init = [ Get "/init" ]
+                            , update =
+                                \s ->
+                                    case s of
+                                        "init-response" ->
+                                            [ Get "/update"
+                                            ]
+
+                                        "update-response" ->
+                                            [ Get "/last"
+                                            ]
+
+                                        _ ->
+                                            []
+                            }
+                in
+                    runMocked program
+                        [ InspectModel []
+                        , ExpectedCmd (Get "/init")
+                        , InspectModel []
+                        , SendMsg (ServerResponse "init-response")
+                        , InspectModel [ "init-response" ]
+                        , ExpectedCmd (Get "/update")
+                        , InspectModel [ "init-response" ]
+                        , SendMsg (ServerResponse "update-response")
+                        , ExpectedCmd (Get "/last")
+                        , InspectModel [ "init-response", "update-response" ]
+                        ]
             )
         ]

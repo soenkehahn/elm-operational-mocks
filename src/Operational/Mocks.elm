@@ -1,4 +1,4 @@
-module Operational.Mocks exposing (runMocked)
+module Operational.Mocks exposing (runMocked, Step(..))
 
 {-| `Operational.Mocks` allows you to test side-effects of elm applications
 as long as they're written with the help of `elm-operational`.
@@ -10,49 +10,44 @@ import Expect exposing (Expectation, fail, equal)
 import Tuple exposing (first, second)
 
 
+type Step cmd msg model
+    = ExpectedCmd cmd
+    | SendMsg msg
+    | InspectModel model
+
+
 {-| `runMocked component expectedEffects finalState` tests the given elm
 `component`. It fails when one of the expected effects is not issues by the
 application or if the final resulting state is not equal to `finalState`.
 -}
 runMocked :
     { program
-        | init : ( model, List primitive )
-        , update : msg -> model -> ( model, List primitive )
+        | init : ( model, List cmd )
+        , update : msg -> model -> ( model, List cmd )
     }
-    -> List ( primitive, msg )
-    -> model
+    -> List (Step cmd msg model)
     -> Expectation
-runMocked program expectedCommands expectedFinal =
-    let
-        ( model, cmd ) =
-            program.init
-    in
-        simulate program cmd model expectedCommands expectedFinal
+runMocked program expectedSteps =
+    simulate program
+        expectedSteps
+        program.init
 
 
 simulate :
     { program
-        | init : ( model, List primitive )
-        , update : msg -> model -> ( model, List primitive )
+        | init : ( model, List cmd )
+        , update : msg -> model -> ( model, List cmd )
     }
-    -> List primitive
-    -> model
-    -> List ( primitive, msg )
-    -> model
+    -> List (Step cmd msg model)
+    -> ( model, List cmd )
     -> Expectation
-simulate program cmds currentModel expectedCommands expectedFinal =
-    case ( cmds, expectedCommands ) of
+simulate program expectedSteps ( currentModel, cmds ) =
+    case ( cmds, expectedSteps ) of
         ( [], [] ) ->
-            currentModel |> equal expectedFinal
+            Expect.pass
 
-        ( [], [ ( expectedCommand, _ ) ] ) ->
+        ( [], (ExpectedCmd expectedCommand) :: _ ) ->
             fail ("expected command: " ++ toString expectedCommand)
-
-        ( [], expectedCommands ) ->
-            fail
-                ("expected commands: "
-                    ++ toString (List.map first expectedCommands)
-                )
 
         ( [ cmd ], [] ) ->
             fail ("unexpected command: " ++ toString cmd)
@@ -60,17 +55,26 @@ simulate program cmds currentModel expectedCommands expectedFinal =
         ( cmds, [] ) ->
             fail ("unexpected commands: " ++ toString cmds)
 
-        ( cmd :: queuedCmds, ( expectedCmd, response ) :: restExpectedCommands ) ->
+        ( queuedCmds, (SendMsg msg) :: restExpectedSteps ) ->
+            let
+                ( nextModel, nextCmds ) =
+                    program.update msg currentModel
+            in
+                simulate program
+                    restExpectedSteps
+                    ( nextModel, (queuedCmds ++ nextCmds) )
+
+        ( queuedCmds, (InspectModel expected) :: restExpectedSteps ) ->
+            (currentModel |> equal expected)
+                &&& simulate program
+                        restExpectedSteps
+                        ( currentModel, queuedCmds )
+
+        ( cmd :: queuedCmds, (ExpectedCmd expectedCmd) :: restExpectedSteps ) ->
             (cmd |> equal expectedCmd)
-                &&& let
-                        ( nextModel, nextCmds ) =
-                            program.update response currentModel
-                    in
-                        simulate program
-                            (queuedCmds ++ nextCmds)
-                            nextModel
-                            restExpectedCommands
-                            expectedFinal
+                &&& simulate program
+                        restExpectedSteps
+                        ( currentModel, queuedCmds )
 
 
 (&&&) : Expectation -> Expectation -> Expectation
