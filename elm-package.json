@@ -1,5 +1,5 @@
 {
-    "version": "2.0.0",
+    "version": "2.0.1",
     "summary": "test the side-effects of your elm applications",
     "repository": "https://github.com/soenkehahn/elm-operational-mocks.git",
     "license": "BSD3",
