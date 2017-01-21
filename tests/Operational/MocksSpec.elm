@@ -16,6 +16,17 @@ type Msg
 
 type TestCmd
     = Get String
+    | Post String (() -> ())
+
+
+requestInfo : TestCmd -> ( String, String )
+requestInfo cmd =
+    case cmd of
+        Get url ->
+            ( "GET", url )
+
+        Post url _ ->
+            ( "POST", url )
 
 
 mkProgram { init, update } =
@@ -124,6 +135,22 @@ all =
                                             ++ toString (Get "/foo")
                                     }
                                 )
+                )
+            , test "allows to inspect part of expected commands"
+                (\() ->
+                    let
+                        program =
+                            mkProgram
+                                { init = [ Post "/foo" (\() -> ()) ]
+                                , update = \_ -> []
+                                }
+                    in
+                        runMocked program
+                            [ InspectCmd
+                                (requestInfo
+                                    >> equal ( "POST", "/foo" )
+                                )
+                            ]
                 )
             , test "detects wrong final states"
                 (\() ->

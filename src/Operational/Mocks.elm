@@ -19,6 +19,7 @@ application as a list of `Step`s. In a step you can:
 -}
 type Step cmd msg model
     = ExpectedCmd cmd
+    | InspectCmd (cmd -> Expectation)
     | SendMsg msg
     | InspectModel (model -> Expectation)
 
@@ -56,6 +57,9 @@ simulate program expectedSteps ( currentModel, cmds ) =
         ( [], (ExpectedCmd expectedCommand) :: _ ) ->
             fail ("expected command: " ++ toString expectedCommand)
 
+        ( [], (InspectCmd _) :: _ ) ->
+            fail "expected one more command"
+
         ( [ cmd ], [] ) ->
             fail ("unexpected command: " ++ toString cmd)
 
@@ -79,6 +83,12 @@ simulate program expectedSteps ( currentModel, cmds ) =
 
         ( cmd :: queuedCmds, (ExpectedCmd expectedCmd) :: restExpectedSteps ) ->
             (cmd |> equal expectedCmd)
+                &&& simulate program
+                        restExpectedSteps
+                        ( currentModel, queuedCmds )
+
+        ( cmd :: queuedCmds, (InspectCmd test) :: restExpectedSteps ) ->
+            test cmd
                 &&& simulate program
                         restExpectedSteps
                         ( currentModel, queuedCmds )
