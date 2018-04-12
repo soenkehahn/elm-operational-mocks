@@ -1,6 +1,7 @@
 module Operational.MocksSpec exposing (all)
 
 import Test exposing (..)
+import Test.Runner exposing (..)
 import Expect exposing (..)
 import Tuple exposing (..)
 import Platform.Cmd exposing (..)
@@ -108,7 +109,7 @@ all =
                             |> getFailure
                             |> equal
                                 (Just
-                                    { given = ""
+                                    { given = Nothing
                                     , message =
                                         "expected command: "
                                             ++ toString (Get "/foo")
@@ -129,7 +130,7 @@ all =
                             |> getFailure
                             |> equal
                                 (Just
-                                    { given = ""
+                                    { given = Nothing
                                     , message =
                                         "unexpected command: "
                                             ++ toString (Get "/foo")
@@ -211,7 +212,7 @@ all =
                             |> getFailure
                             |> equal
                                 (Just
-                                    { given = ""
+                                    { given = Nothing
                                     , message = "expected command: " ++ toString (Get "/bar")
                                     }
                                 )
