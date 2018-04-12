@@ -4,6 +4,7 @@ module Operational.Mocks exposing (runMocked, Step(..))
 as long as they're written with the help of `elm-operational`.
 
 @docs runMocked, Step
+
 -}
 
 import Expect exposing (Expectation, fail, equal)
@@ -13,9 +14,10 @@ import Tuple exposing (first, second)
 {-| In a test you can declare the expected behaviour of your
 application as a list of `Step`s. In a step you can:
 
-- expect your app to issue a command with `ExpectedCmd`,
-- send a message to your app with `SendMsg`,
-- inspect the current model of your app with `InspectModel`.
+  - expect your app to issue a command with `ExpectedCmd`,
+  - send a message to your app with `SendMsg`,
+  - inspect the current model of your app with `InspectModel`.
+
 -}
 type Step cmd msg model
     = ExpectedCmd cmd
